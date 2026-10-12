@@ -7,6 +7,7 @@
 [Yukun Huang](https://yukun-huang.github.io/)<sup>2</sup>,
 [Jiwen Yu](https://yujiwen.github.io/)<sup>1</sup>,
 [Kunhao Liu](https://kunhao-liu.github.io/)<sup>2</sup>,
+<br>
 [Donglin Yang](https://linydthu.github.io/)<sup>1</sup>,
 [Wenbo Hu](https://wbhu.github.io/)<sup>2</sup>,
 [Ying Shan](https://scholar.google.com/citations?user=4oXBp9UAAAAJ)<sup>2</sup>,
@@ -28,7 +29,7 @@
 
 ## 🎬 Demo video
 
-https://github.com/user-attachments/assets/8496d2d6-51fd-4d75-b4aa-31a53491d954
+https://github.com/user-attachments/assets/6c0358a5-0cb1-46d1-905f-8ad693d9dbd4
 
 ## 💡 Overview
 
