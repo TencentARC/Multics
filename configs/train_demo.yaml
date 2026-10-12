@@ -1,0 +1,42 @@
+# Four-player bundled examples; group and hub counts are derived.
+task: train
+num_players: 4
+simplex_pool_size: 10
+simplex_train_permute: false
+simplex_train_sample_vertex_ids: true
+num_local_hub_tokens: 5
+num_global_hub_tokens: 6
+hier_local_hub_mode: shared
+hier_direct_schedule: uniform
+hier_direct_frac: 1.0
+hier_group_mode: csv
+hier_group_format: membership
+use_camera_pose: true
+camera_dim: 12
+camera_dropout_p: 0.1
+target_rgb_frames: 165
+num_frame_per_block: 3
+local_attn_size: 7
+local_attn_size_after: 21
+local_attn_switch_step: 10000
+learning_rate: 3.0e-05
+steps_per_epoch: 5
+max_epochs: 1
+text_prompt_dropout_p: 0.1
+use_gradient_checkpointing: true
+attn_impl: flex
+training_strategy: auto
+output_path: outputs/train_demo
+environment:
+  WAN_FLEX_MODE: default
+  WAN_FLEX_KOPT: 0
+  WAN_HIER_REUSE_BLOCKMASK: 1
+  WAN_HIER_BLOCKMASK_CACHE_SIZE: 2
+  WAN_HIER_BLOCKMASK_COMPILE: 1
+max_steps: 5
+dataloader_num_workers: 0
+dataset_path: asset/examples/4players
+metadata_file_name: metadata.csv
+dit_path: models/Wan-AI/Wan2.2-TI2V-5B/diffusion_pytorch_model*.safetensors
+vae_path: models/Wan-AI/Wan2.2-TI2V-5B/Wan2.2_VAE.pth
+text_encoder_path: models/Wan-AI/Wan2.1-T2V-1.3B/models_t5_umt5-xxl-enc-bf16.pth

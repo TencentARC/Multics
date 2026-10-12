@@ -1,0 +1,42 @@
+[project]
+name = "multics"
+version = "0.1.0"
+description = "Hierarchical multi-player video generation with action and camera conditioning"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+dependencies = [
+    "torch==2.8.0", "torchvision==0.23.0", "triton==3.4.0",
+    "lightning==2.6.6", "numpy==1.26.4", "pandas==2.3.3",
+    "transformers==4.57.6", "tokenizers==0.22.2",
+    "huggingface-hub==0.36.2", "modelscope==1.35.3", "safetensors==0.7.0",
+    "einops==0.8.2", "sentencepiece==0.2.1", "ftfy==6.3.1", "regex==2026.3.32",
+    "pillow==12.1.1", "imageio==2.37.3", "imageio-ffmpeg==0.6.0",
+    "opencv-python-headless==4.11.0.86", "pyyaml==6.0.3", "tqdm==4.70.1",
+    "tensorboard==2.20.0", "setuptools>=70,<82", "pyarrow==25.0.0",
+    "flashinfer-python==0.6.18",
+    "ninja>=1.11,<2",
+]
+
+[project.optional-dependencies]
+distributed = ["deepspeed==0.18.9"]
+logging = ["swanlab==0.10.1"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.12"]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 88

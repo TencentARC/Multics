@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+/outputs/
+/models/
+*.ckpt
+*.safetensors
+*.log
+.DS_Store

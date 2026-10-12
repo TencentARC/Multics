@@ -1,0 +1,31 @@
+# Shared hierarchical preset. Choose num_players; group and hub counts are derived.
+num_players: 4
+simplex_pool_size: 10
+num_local_hub_tokens: 5
+num_global_hub_tokens: 6
+hier_direct_schedule: uniform
+hier_direct_frac: 1.0
+hier_group_format: membership
+use_camera_pose: true
+camera_dim: 12
+camera_dropout_p: 0.1
+target_rgb_frames: 165
+causal_num_frames: 165
+num_frame_per_block: 3
+local_attn_size: 21
+attn_impl: flex
+hier_infer_mode: cached
+cfg_scale: 5.0
+num_inference_steps: 50
+seed: 0
+output_dir: outputs/inference/{inference_setting}
+environment:
+  WAN_HIER_INFER_KERNEL: paged_kv
+  WAN_FLEX_MODE: default
+  WAN_FLEX_KOPT: 1
+wan_model_root: models/Wan-AI
+hier_local_hub_mode: shared
+hier_group_mode: csv
+ckpt_path: null
+dataset_path: null
+metadata_file_name: null
