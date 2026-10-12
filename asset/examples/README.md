@@ -3,13 +3,13 @@
 The examples are grouped by player count. Every player stream has 165 RGB frames (42 latent frames).
 
 - `4players/` contains `4_01`–`4_05`, with both raw and precomputed inputs.
-- `6players/` contains `6_01`–`6_03`, from source cases 10, 26, 40, respectively.
-- `8players/` contains `8_01`–`8_02`, from source cases 87, 84, respectively.
-- `10players/` contains `10_01`–`10_02`, from more-scene source cases 8, 21, respectively.
+- `6players/` contains `6_01`–`6_03`.
+- `8players/` contains `8_01`–`8_02`.
+- `10players/` contains `10_01`–`10_02`.
 
 The 6-, 8-, and 10-player sets contain raw inputs. All four sets use the 4-player checkpoint, with run settings `4players`, `4infer6`, `4infer8`, and `4infer10`.
 
-Each directory is named `<players>_<number>`. The CSV `case_id` and CLI `--case` use the integer number: `--num_players 6 --case 1` selects `6_01` and writes `outputs/inference/4infer6/video1_grid.mp4`. Case IDs remain stable if the CSV is reordered. Each manifest preserves the original `source_row_index`; use the sequential case ID, not the source row, on the CLI.
+Each directory is named `<players>_<number>`. The CSV `case_id` and CLI `--case` use the integer number: `--num_players 6 --case 1` selects `6_01` and writes `outputs/inference/4infer6/video1_grid.mp4`. Case IDs remain stable if the CSV is reordered.
 
 ## Layout
 
@@ -26,7 +26,7 @@ asset/examples/
 │       └── preview.jpg
 ├── 6players/                  # examples 6_01 through 6_03
 ├── 8players/                  # examples 8_01 and 8_02
-└── 10players/                 # examples 10_01 and 10_02; more-scene inputs
+└── 10players/                 # examples 10_01 and 10_02
     ├── inputs.csv
     ├── manifest.json
     └── 10_01/
@@ -129,7 +129,7 @@ These previews show generated H200 views at frame 82.
 
 ### Four-player model with ten players
 
-These more-scene previews show generated H200 views at frame 82.
+These previews show generated H200 views at frame 82.
 
 | Case | Preview |
 | --- | --- |
