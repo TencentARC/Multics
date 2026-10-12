@@ -2,12 +2,12 @@
 
 The examples are grouped by player count. Every player stream has 165 RGB frames (42 latent frames).
 
-- `4players/` contains `4_01`–`4_05`, with both raw and precomputed inputs.
+- `4players/` contains `4_01`–`4_05`.
 - `6players/` contains `6_01`–`6_03`.
 - `8players/` contains `8_01`–`8_02`.
 - `10players/` contains `10_01`–`10_02`.
 
-The 6-, 8-, and 10-player sets contain raw inputs. All four sets use the 4-player checkpoint, with run settings `4players`, `4infer6`, `4infer8`, and `4infer10`.
+The 4-, 6-, 8-, and 10-player sets contain raw inputs. All four sets use the 4-player checkpoint, with run settings `4players`, `4infer6`, `4infer8`, and `4infer10`.
 
 Each directory is named `<players>_<number>`. The CSV `case_id` and CLI `--case` use the integer number: `--num_players 6 --case 1` selects `6_01` and writes `outputs/inference/4infer6/video1_grid.mp4`. Case IDs remain stable if the CSV is reordered.
 
