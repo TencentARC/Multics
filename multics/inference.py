@@ -1,13 +1,12 @@
 from .config import select_case_rows, case_output_id
+from .checkpoint import build_dit, load_complete_state_dict, stage2_options
 from .inference_args import parse_args
-import copy
 import json
 import os
 import time
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 from PIL import Image
 from .utils import ModelConfig
 from .pipelines.wan_video_Nplayers import WanVideoNPlayersPipeline
@@ -22,7 +21,6 @@ from multics.data.raw_inputs import (
     is_raw_metadata,
     prepare_raw_inputs,
 )
-import glob
 from multics.data.utils import tensor_bchw_to_pil_list, pad_pil_list_to_length
 
 
@@ -67,7 +65,7 @@ def _load_dit_checkpoint_state(ckpt_path: str):
             shard_path = os.path.join(ckpt_path, shard)
             with _timed(f"torch.load DiT ckpt shard {shard}"):
                 shard_state = torch.load(
-                    shard_path, map_location="cpu", weights_only=False
+                    shard_path, map_location="cpu", weights_only=True
                 )
             if not isinstance(shard_state, dict):
                 raise RuntimeError(
@@ -77,7 +75,7 @@ def _load_dit_checkpoint_state(ckpt_path: str):
         partial_ckpt = True
     else:
         with _timed(f"torch.load DiT ckpt {os.path.basename(ckpt_path)}"):
-            state_dict = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+            state_dict = torch.load(ckpt_path, map_location="cpu", weights_only=True)
     if (
         isinstance(state_dict, dict)
         and "state_dict" in state_dict
@@ -597,13 +595,8 @@ def main():
     wan_root = args.wan_model_root.rstrip("/")
     print(f"[timing] wan_model_root={wan_root}", flush=True)
     print(f"[timing] ckpt_path={args.ckpt_path}", flush=True)
-    with _timed("glob DiT safetensors"):
-        dit_files = sorted(
-            glob.glob(f"{wan_root}/Wan2.2-TI2V-5B/diffusion_pytorch_model*.safetensors")
-        )
-        print(f"[timing]   found {len(dit_files)} shards", flush=True)
     _patch_model_manager_load_timing()
-    with _timed("WanVideoNPlayersPipeline.from_pretrained (T5+DiT+VAE+tokenizer)"):
+    with _timed("WanVideoNPlayersPipeline.from_pretrained (T5+VAE+tokenizer)"):
         pipe = WanVideoNPlayersPipeline.from_pretrained(
             torch_dtype=torch.bfloat16,
             device="cuda",
@@ -615,7 +608,6 @@ def main():
                     path=f"{wan_root}/Wan2.1-T2V-1.3B/models_t5_umt5-xxl-enc-bf16.pth",
                     offload_device="cpu",
                 ),
-                ModelConfig(path=dit_files, offload_device="cpu"),
                 ModelConfig(
                     path=f"{wan_root}/Wan2.2-TI2V-5B/Wan2.2_VAE.pth",
                     offload_device="cpu",
@@ -623,22 +615,6 @@ def main():
             ],
         )
         pipe.num_players = int(args.num_players)
-    with _timed("patch DiT (keyboard/action modules)"):
-        pipe.dit.keyboard_embedding = nn.Linear(23, 3072)
-        dim = pipe.dit.blocks[0].self_attn.q.weight.shape[0]
-        for block in pipe.dit.blocks:
-            block.action_mlp = nn.Sequential(
-                nn.LayerNorm(dim + 24, eps=1e-05, elementwise_affine=True),
-                nn.Linear(dim + 24, dim + 24),
-                nn.GELU(),
-                nn.Linear(dim + 24, dim),
-                nn.LayerNorm(dim, eps=1e-05, elementwise_affine=True),
-            )
-            block.action_temporal_attn = copy.deepcopy(block.self_attn)
-            block.action_cross_attn = copy.deepcopy(block.cross_attn)
-        pipe.dit.enable_simplex_rope(
-            pool_size=args.simplex_pool_size, gamma=args.simplex_gamma
-        )
     latent_t = (args.target_rgb_frames - 1) // 4 + 1
     if latent_t % args.num_frame_per_block != 0:
         raise ValueError(
@@ -672,27 +648,12 @@ def main():
             )
     elif args.num_local_hub_tokens <= 0:
         raise ValueError("ordinary hier_hub requires num_local_hub_tokens>0")
-    pipe.enable_stage2(
-        num_hub_tokens=args.num_hub_tokens,
-        local_attn_size=args.local_attn_size,
-        num_frame_per_block=args.num_frame_per_block,
-        attention_mode="hier_hub",
-        num_groups=args.num_groups,
-        num_local_hub_tokens=args.num_local_hub_tokens,
-        num_global_hub_tokens=args.num_global_hub_tokens,
-        hier_direct_schedule=args.hier_direct_schedule,
-        hier_direct_frac=args.hier_direct_frac,
-        hier_direct_layers=args.hier_direct_layers,
-        attn_impl=args.attn_impl,
-        hier_no_local_hub=args.hier_no_local_hub,
-        hier_local_hub_mode=args.hier_local_hub_mode,
-    )
-    if args.use_camera_pose:
-        with _timed("dit.enable_camera_pose_alignment"):
-            pipe.dit.enable_camera_pose_alignment(
-                cam_dim=args.camera_dim, dropout_p=args.camera_dropout_p
-            )
-    state_dict, partial_ckpt = _load_dit_checkpoint_state(args.ckpt_path)
+    # Set pipeline runtime options before attaching the DiT so its parameters
+    # are configured exactly once, before loading the complete checkpoint.
+    pipe.enable_stage2(**stage2_options(args))
+    with _timed("construct Multics DiT without base weights"):
+        pipe.dit = build_dit(args)
+    state_dict, _ = _load_dit_checkpoint_state(args.ckpt_path)
     if not args.hier_no_local_hub:
         state_dict, migration = prepare_hier_local_hub_state_dict_for_load(
             state_dict,
@@ -717,74 +678,9 @@ def main():
             raise RuntimeError(
                 f"No-local checkpoint has an incompatible global_hub_embed: expected {expected}, got {(None if global_seed is None else tuple(global_seed.shape))}"
             )
-    with _timed("dit.load_state_dict(ckpt)"):
-        missing, unexpected = pipe.dit.load_state_dict(state_dict, strict=False)
-    if missing:
-        _hub_related = [k for k in missing if k.endswith("hub_embed")]
-        _hier_hub_related = [
-            k for k in missing if k in ("local_hub_embed", "global_hub_embed")
-        ]
-        if _hier_hub_related:
-            raise RuntimeError(
-                f"hier_hub ckpt is missing required hub embeddings: {_hier_hub_related}. This usually means CKPT_PATH points to the wrong experiment/version or to a non-hier checkpoint."
-            )
-        _cam_related = [k for k in missing if ".cam_q." in k or ".cam_k." in k]
-        _other = [k for k in missing if k not in _hub_related and k not in _cam_related]
-        if _other and (not partial_ckpt):
-            raise RuntimeError(
-                f"Unexpected missing keys in DiT ckpt: {_other[:10]} ..."
-            )
-        if _other and partial_ckpt:
-            print(
-                f"[ckpt] partial DiT ckpt missing {len(_other)} key(s); keeping those values from the pretrained/base model.",
-                flush=True,
-            )
-        if _hub_related:
-            print(
-                f"[checkpoint] {len(_hub_related)} hub_embed param(s) absent in DiT ckpt (zeros init)."
-            )
-        if _cam_related:
-            print(
-                f"[camera-pose] {len(_cam_related)} camera adapter param(s) absent in DiT ckpt (zero-init)."
-            )
-    if unexpected:
-        _ff_keys = (".k_ff", ".v_ff", ".norm_k_ff", ".ff_gate")
-        _ff_related = [k for k in unexpected if any((s in k for s in _ff_keys))]
-        _handled_unexpected = list(_ff_related)
-        _old_hub = [k for k in unexpected if k.endswith(".hub_embed")]
-        if _old_hub:
-            print(
-                f"[checkpoint] ignoring {len(_old_hub)} legacy per-block hub_embed key(s) in ckpt."
-            )
-        _handled_unexpected += _old_hub
-        _legacy_cam_bias = [
-            k
-            for k in unexpected
-            if k.endswith(".cam_q.bias") or k.endswith(".cam_k.bias")
-        ]
-        if _legacy_cam_bias:
-            print(
-                f"[camera-pose] dropping {len(_legacy_cam_bias)} legacy camera projection bias key(s) for the bias-free adapter."
-            )
-        _disabled_cam = [
-            k
-            for k in unexpected
-            if not args.use_camera_pose
-            and (".cam_q." in k or ".cam_k." in k)
-            and (k not in _legacy_cam_bias)
-        ]
-        if _disabled_cam:
-            print(
-                f"[camera-pose] ignoring {len(_disabled_cam)} camera adapter key(s) because camera conditioning is disabled."
-            )
-        _handled_unexpected += _legacy_cam_bias + _disabled_cam
-        if _ff_related:
-            print(
-                f"[WARN] DiT ckpt 中检测到 {len(_ff_related)} 个 first-frame cross-attn 分支参数 （k_ff/v_ff/norm_k_ff/ff_gate），当前架构已回退到 latent-overwrite 方案，这些参数会被忽略。如不需要可重新存一份干净的 ckpt。示例: {_ff_related[:3]}"
-            )
-        _other_unexpected = [k for k in unexpected if k not in _handled_unexpected]
-        if _other_unexpected:
-            print(f"[WARN] unexpected keys in DiT ckpt: {_other_unexpected[:10]} ...")
+    with _timed("load complete Multics DiT checkpoint"):
+        load_complete_state_dict(pipe.dit, state_dict)
+    del state_dict
     with _timed("pipe.to(cuda) + bfloat16"):
         pipe.to("cuda")
         pipe.to(dtype=torch.bfloat16)

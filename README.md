@@ -21,7 +21,7 @@
 
 ![arXiv coming soon](https://img.shields.io/badge/arXiv-Coming__Soon-B31B1B)
 [![Project Page](https://img.shields.io/badge/Project-Page-76B900)](https://karine-huang.github.io/Multics/)
-[![Hugging Face Models](https://img.shields.io/badge/Hugging%20Face-Models-FFD21E)](#model-weights)
+[![Hugging Face Models](https://img.shields.io/badge/Hugging%20Face-Models-FFD21E)](https://huggingface.co/TencentARC/Multics)
 [![Docs](https://img.shields.io/badge/Docs-Get__Started-2563EB)](#installation)
 [![License](https://img.shields.io/badge/Code__License-Apache__2.0-76B900)](LICENSE)
 
@@ -54,45 +54,11 @@ source .venv/bin/activate
 
 ### Model Weights
 
-| Component | Source |
-| --- | --- |
-| Video backbone and VAE | [Wan2.2 TI2V 5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B/tree/main) |
-| Text encoder and tokenizer | [Wan2.1 T2V 1.3B components](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B/tree/main) |
-| Multics, 4 players | [Hugging Face](https://huggingface.co/) |
-
-<!-- Replace the Multics Hugging Face URL with the model repository before release. -->
-
-<details>
-<summary>Download the base weights and arrange model files</summary>
+Download the complete inference bundle from [TencentARC/Multics](https://huggingface.co/TencentARC/Multics), including the 4-player checkpoint, VAE, text encoder, and tokenizer:
 
 ```bash
-hf download Wan-AI/Wan2.2-TI2V-5B \
-  --include 'diffusion_pytorch_model*.safetensors' 'Wan2.2_VAE.pth' \
-  --local-dir models/Wan-AI/Wan2.2-TI2V-5B
-
-hf download Wan-AI/Wan2.1-T2V-1.3B \
-  --include 'models_t5_umt5-xxl-enc-bf16.pth' 'google/umt5-xxl/*' \
-  --local-dir models/Wan-AI/Wan2.1-T2V-1.3B
+hf download TencentARC/Multics --local-dir models
 ```
-
-Arrange the downloaded files as follows:
-
-```text
-models/
-├── Wan-AI/
-│   ├── Wan2.1-T2V-1.3B/
-│   │   ├── models_t5_umt5-xxl-enc-bf16.pth
-│   │   └── google/umt5-xxl/
-│   └── Wan2.2-TI2V-5B/
-│       ├── diffusion_pytorch_model-*.safetensors
-│       └── Wan2.2_VAE.pth
-└── multics/
-    └── 4players/
-        ├── hparams.yaml
-        └── checkpoints/model.ckpt
-```
-
-</details>
 
 ### Inference
 
@@ -130,9 +96,13 @@ Outputs are saved to `outputs/inference/4infer6/`, `4infer8/`, or `4infer10/`. S
 
 ### Training
 
-To train the 4-player model, prepare your dataset in the [precomputed input format](asset/examples/README.md#precomputed-inputs), then run:
+To train the 4-player model, prepare your dataset in the [precomputed input format](asset/examples/README.md#precomputed-inputs) and download the original Wan2.2 backbone for initialization:
 
 ```bash
+hf download Wan-AI/Wan2.2-TI2V-5B \
+  --include 'diffusion_pytorch_model*.safetensors' \
+  --local-dir models/Wan-AI/Wan2.2-TI2V-5B
+
 uv sync --locked --extra distributed
 
 NPROC_PER_NODE=8 bash scripts/train.sh \
