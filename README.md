@@ -29,7 +29,7 @@
 
 ## 🎬 Demo video
 
-https://github.com/user-attachments/assets/6c0358a5-0cb1-46d1-905f-8ad693d9dbd4
+https://github.com/user-attachments/assets/ba220953-b57f-47a5-bbb8-9b440b55ed11
 
 ## 💡 Overview
 
