@@ -20,7 +20,6 @@
 
 ![arXiv coming soon](https://img.shields.io/badge/arXiv-Coming__Soon-B31B1B)
 [![Project Page](https://img.shields.io/badge/Project-Page-76B900)](https://karine-huang.github.io/Multics/)
-[![GitHub stars](https://img.shields.io/github/stars/TencentARC/Multics?style=social)](https://github.com/TencentARC/Multics)
 [![Hugging Face Models](https://img.shields.io/badge/Hugging%20Face-Models-FFD21E)](#model-weights)
 [![Docs](https://img.shields.io/badge/Docs-Get__Started-2563EB)](#installation)
 [![License](https://img.shields.io/badge/Code__License-Apache__2.0-76B900)](LICENSE)
@@ -29,8 +28,7 @@
 
 ## 🎬 Demo video
 
-<video src="asset/video/demo_v3_3_720p.mp4" controls width="900" preload="metadata">
-</video>
+https://github.com/user-attachments/assets/8496d2d6-51fd-4d75-b4aa-31a53491d954
 
 ## 💡 Overview
 
