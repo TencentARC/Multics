@@ -2,7 +2,7 @@
 
 # *Multics*: Generative Multi-Player World Model with Hierarchical Communication
 
-[Kaiyi Huang](https://scholar.google.com/citations?user=dB86D_cAAAAJ)<sup>1</sup>,
+[Kaiyi Huang](https://karine-huang.github.io/)<sup>1</sup>,
 [Wangbo Yu](https://drexubery.github.io/)<sup>2†</sup>,
 [Yukun Huang](https://yukun-huang.github.io/)<sup>2</sup>,
 [Jiwen Yu](https://yujiwen.github.io/)<sup>1</sup>,
