@@ -19,7 +19,7 @@
 
 *Multics* enables scalable multi-player video generation through hierarchical communication.
 
-![arXiv coming soon](https://img.shields.io/badge/arXiv-Coming__Soon-B31B1B)
+[![arXiv](https://img.shields.io/badge/arXiv-2610.17201-B31B1B)](https://arxiv.org/pdf/2610.17201)
 [![Project Page](https://img.shields.io/badge/Project-Page-76B900)](https://karine-huang.github.io/Multics/)
 [![Hugging Face Models](https://img.shields.io/badge/Hugging%20Face-Models-FFD21E)](https://huggingface.co/TencentARC/Multics)
 [![Docs](https://img.shields.io/badge/Docs-Get__Started-2563EB)](#installation)
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/ba220953-b57f-47a5-bbb8-9b440b55ed11
 
 ## 📰 News
 
-- 🔥 \[2026/10\] Paper, training and inference code released.
+- 🔥 \[2026/10\] [Paper](https://arxiv.org/pdf/2610.17201), training and inference code released.
 
 ## 🚀 Get started
 
@@ -129,6 +129,9 @@ If you find this work useful, please cite:
 @misc{huang2026multics,
   title  = {Multics: Generative Multi-Player World Model with Hierarchical Communication},
   author = {Huang, Kaiyi and Yu, Wangbo and Huang, Yukun and Yu, Jiwen and Liu, Kunhao and Yang, Donglin and Hu, Wenbo and Shan, Ying and Liu, Xihui},
-  year   = {2026}
+  year   = {2026},
+  eprint = {2610.17201},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2610.17201}
 }
 ```
