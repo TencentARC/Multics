@@ -22,6 +22,7 @@ from multics.data.raw_inputs import (
     prepare_raw_inputs,
 )
 from multics.data.utils import tensor_bchw_to_pil_list, pad_pil_list_to_length
+from multics.visualization import overview_path, save_action_camera
 
 
 def _timed(section: str):
@@ -179,6 +180,43 @@ def _existing_batch_indices(
         if expected and all((name in existing for name in expected)):
             done.add(batch_idx)
     return done
+
+
+def _backfill_action_camera(
+    args, metadata, output_ids, completed, selected, rank, world_size
+):
+    """Finish missing raw-input overviews without loading the GPU model."""
+    completed = set(completed)
+    for index in sorted(completed & selected):
+        if index % world_size != rank:
+            continue
+        output_id = output_ids[index]
+        destination = overview_path(args.output_dir, output_id)
+        if destination.is_file():
+            continue
+        videos = [
+            os.path.join(
+                args.output_dir,
+                f"video{output_id}_{_player_file_tag(p, args.num_players)}.mp4",
+            )
+            for p in range(args.num_players)
+        ]
+        if not all(os.path.isfile(path) for path in videos):
+            # A grid alone is insufficient to reconstruct independent views.
+            completed.remove(index)
+            continue
+        if os.environ.get("INFER_SHARD_DRY", "0") != "1":
+            with _timed(f"backfill action/camera overview video{output_id}"):
+                save_action_camera(
+                    videos,
+                    metadata.iloc[index],
+                    args.dataset_path,
+                    destination,
+                    args.grid_fps,
+                    args.target_rgb_frames,
+                    label=f"Example {args.num_players}_{output_id:02d}",
+                )
+    return completed
 
 
 def _infer_rank_world():
@@ -519,10 +557,15 @@ def main():
     row_start, row_end = _infer_row_bounds(n_planned)
     eligible = select_case_rows(args, sample_metadata, list(range(row_start, row_end)))
     selected = set(eligible)
+    raw_inputs = is_raw_metadata(metadata_table)
     skip_batches = set()
     if os.environ.get("FORCE_INFER", "0") != "1":
         existing = _list_mp4_basenames(args.output_dir, None)
         skip_batches = _existing_batch_indices(n_planned, args, existing, output_ids)
+        if raw_inputs:
+            skip_batches = _backfill_action_camera(
+                args, sample_metadata, output_ids, skip_batches, selected, rank, world_size
+            )
         remaining = n_planned - len(skip_batches)
         print(
             f"[skip] {len(skip_batches)}/{n_planned} batches already have mp4 (local); remaining={remaining}; FORCE_INFER=1 to overwrite",
@@ -548,7 +591,6 @@ def main():
     if not my_rows:
         print("[shard] nothing left on this rank; skip model load", flush=True)
         return
-    raw_inputs = is_raw_metadata(metadata_table)
     if raw_inputs:
         if args.precomputed_consecutive_rows != 1:
             raise ValueError("Raw-input CSVs require precomputed_consecutive_rows=1")
@@ -880,3 +922,14 @@ def main():
                 fps=fps,
                 quality=5,
             )
+        if raw_inputs:
+            with _timed(f"save action/camera overview video{batch_idx}"):
+                save_action_camera(
+                    gen_players,
+                    sample_metadata.iloc[my_rows[local_i]],
+                    args.dataset_path,
+                    overview_path(args.output_dir, batch_idx),
+                    fps,
+                    args.target_rgb_frames,
+                    label=f"Example {args.num_players}_{batch_idx:02d}",
+                )

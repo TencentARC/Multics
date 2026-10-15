@@ -94,6 +94,22 @@ python inference.py --config configs/inference_demo.yaml \
 
 Outputs are saved to `outputs/inference/4infer6/`, `4infer8/`, or `4infer10/`. See [example inputs](asset/examples/README.md) for the data format and previews.
 
+#### GPU memory
+
+Single-GPU inference with `configs/inference_demo.yaml`: BF16, 640 × 352 per
+player, 165 frames, and 50 sampling steps (PyTorch 2.8.0, CUDA 12.8).
+
+GPU memory grows approximately linearly with player count over the tested 4–10 player range:
+
+| Players | Peak allocated (GiB) | Peak reserved (GiB) |
+| --- | ---: | ---: |
+| 4 | 59.9 | 74.9 |
+| 6 | 75.3 | 97.4 |
+| 8 | 90.6 | 119.0 |
+| 10 | 106.1 | 139.2 |
+
+Measured PyTorch peaks for reference. Allocated measures tensor memory; reserved also includes allocator cache.
+
 ### Training
 
 To train the 4-player model, prepare your dataset in the [precomputed input format](asset/examples/README.md#precomputed-inputs) and download the original Wan2.2 backbone for initialization:
