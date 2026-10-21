@@ -1639,17 +1639,15 @@ class LightningModelForTrain(pl.LightningModule):
             torch.distributed.barrier()
 
     def _run_val_sample(self, batch, batch_idx):
-        """训练集前 N 条的 causal_inference 可视化：只在 rank0 跑，生成/GT 视频记到 logger。
+        """Save generated player views for the first N training samples on rank 0.
 
         依赖 PrecomputedLatentDataset 的 batch 结构（batch_size=1）：
           latents [1,P,48,T_lat,h,w]、keyboard [1,P,T,23]、mouse [1,P,T,2]。
-        KV cache 与 δ-mem state 在 causal_inference 内部逐次 reset，故每条样本独立。
+        KV cache 在 causal_inference 内部逐次 reset，故每条样本独立。
         """
         if "latents" not in batch and "latents1" not in batch:
             return
-        from .data.video import save_video
-        from multics.data.utils import tensor_bchw_to_pil_list, pad_pil_list_to_length
-        from PIL import Image as _PILImage
+        from .data.video import generated_player_grid, save_video
 
         gs = int(self.global_step)
         _dtype, _dev = (self.pipe.torch_dtype, self.device)
@@ -1667,10 +1665,6 @@ class LightningModelForTrain(pl.LightningModule):
             if "camera_pose" not in batch:
                 raise KeyError("--use_camera_pose validation 需要 camera_pose")
             camera_pose = batch["camera_pose"].squeeze(0).to(dtype=_dtype, device=_dev)
-        self.pipe.load_models_to_device(["vae"])
-        gt_all = self.pipe.decode_video(video_latents, **self.tiler_kwargs)
-        gt_a = gt_all[0:1]
-        gt_b = gt_all[1:2]
         prompt = ""
         negative_prompt = ""
         has_caption_prompt = False
@@ -1703,13 +1697,11 @@ class LightningModelForTrain(pl.LightningModule):
             gen_players = self.pipe.causal_inference(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
-                video1=gt_a,
-                video2=gt_b,
                 mouse=mouse,
                 keyboard=keyboard,
                 num_frames=self.val_causal_num_frames,
-                height=gt_a.shape[-2],
-                width=gt_a.shape[-1],
+                height=video_latents.shape[-2] * self.pipe.vae.upsampling_factor,
+                width=video_latents.shape[-1] * self.pipe.vae.upsampling_factor,
                 cfg_scale=val_cfg_scale,
                 num_inference_steps=self.val_num_inference_steps,
                 seed=0,
@@ -1732,26 +1724,7 @@ class LightningModelForTrain(pl.LightningModule):
             raise RuntimeError(
                 f"validation generated {len(gen_players)} players, expected P={P}"
             )
-        gen_a, gen_b = (gen_players[0], gen_players[1])
-        gt_a_pils = tensor_bchw_to_pil_list(gt_a)
-        gt_b_pils = tensor_bchw_to_pil_list(gt_b)
-        T = max(len(gen_a), len(gen_b), len(gt_a_pils), len(gt_b_pils))
-        ga = pad_pil_list_to_length(gen_a, T)
-        gb = pad_pil_list_to_length(gen_b, T)
-        qa = pad_pil_list_to_length(gt_a_pils, T)
-        qb = pad_pil_list_to_length(gt_b_pils, T)
-        w0, h0 = ga[0].size
-        _cell = lambda im: im if im.size == (w0, h0) else im.resize((w0, h0))
-        bw = 2
-        total_w, total_h = (2 * w0 + bw, 2 * h0 + bw)
-        grid = []
-        for t in range(T):
-            canvas = _PILImage.new("RGB", (total_w, total_h), (0, 0, 0))
-            canvas.paste(_cell(ga[t]), (0, 0))
-            canvas.paste(_cell(gb[t]), (w0 + bw, 0))
-            canvas.paste(_cell(qa[t]), (0, h0 + bw))
-            canvas.paste(_cell(qb[t]), (w0 + bw, h0 + bw))
-            grid.append(canvas)
+        grid = generated_player_grid(gen_players)
         os.makedirs(self.val_output_dir, exist_ok=True)
         grid_path = os.path.join(self.val_output_dir, f"step{gs}_s{batch_idx}_grid.mp4")
         save_video(grid, grid_path, fps=self.val_grid_fps, quality=5)

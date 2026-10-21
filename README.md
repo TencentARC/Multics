@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/ba220953-b57f-47a5-bbb8-9b440b55ed11
 
 ## 💡 Overview
 
-**Multics** organizes communication across player, group, and global levels, using dynamic grouping based on recent camera trajectories. This hierarchy improves cross-player consistency, action and camera controllability, and robustness to interference while reducing attention computation. Shared group-token parameters allow a model trained with 4 players to generalize to 6, 8, and 10 players without retraining.
+**Multics** organizes communication across player, group, and global levels, using dynamic grouping based on recent player positions and camera poses. This hierarchy improves cross-player consistency, action and camera controllability, and robustness to interference while reducing attention computation. Shared group-token parameters allow a model trained with 4 players to generalize to 6, 8, and 10 players without retraining.
 
 ## 📰 News
 
@@ -73,7 +73,7 @@ python inference.py --config configs/inference_demo.yaml \
   --case 1
 ```
 
-Outputs are saved to `outputs/inference/4players/`. Use `--cases 1 2 3 4 5` to run all five examples.
+Outputs are saved to `outputs/inference/4players/`. Videos show only the generated player views. Use `--cases 1 2 3 4 5` to run all five examples.
 
 #### 2. Scalability
 
@@ -112,7 +112,7 @@ Measured PyTorch peaks for reference. Allocated measures tensor memory; reserved
 
 ### Training
 
-To train the 4-player model, prepare your dataset in the [precomputed input format](asset/examples/README.md#precomputed-inputs) and download the original Wan2.2 backbone for initialization:
+To train the 4-player model, prepare your dataset in the [precomputed input format](asset/examples/README.md#precomputed-inputs). In addition to the model bundle above, download the original Wan2.2 backbone for initialization:
 
 ```bash
 hf download Wan-AI/Wan2.2-TI2V-5B \

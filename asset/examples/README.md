@@ -2,6 +2,8 @@
 
 The examples are grouped by player count. Every player stream has 165 RGB frames (42 latent frames).
 
+Multics performs conditional video generation, so generated videos are expected to follow the supplied conditions but do not need to match the ground-truth videos frame by frame.
+
 - `4players/` contains `4_01`–`4_05`.
 - `6players/` contains `6_01`–`6_03`.
 - `8players/` contains `8_01`–`8_02`.
@@ -56,15 +58,13 @@ Frames run at 32 fps, so every two tick rows form one frame. The clip is the las
 
 For a longer log, such as a whole round, add a `start_frame` column with the first clip frame; frame `f` is tick rows `2f` and `2f+1`. Optional `source{i}` columns of the form `match_id=M/map_name=X/round=R/player=S` record where each stream came from.
 
-At inference, prepared actions and cameras are written to `outputs/prepared_inputs/<setting>/run-*/`, with a distinct directory for every run. Generated group labels use the content-addressed `outputs/grouping_cache/`. The first frames are encoded with the Wan2.2 VAE. The text prompts are encoded directly from the captions, as for the precomputed inputs. Because raw inputs contain no reference video, the output grid shows only the generated views.
+At inference, prepared actions and cameras are written to `outputs/prepared_inputs/<setting>/run-*/`, with a distinct directory for every run. Generated group labels use the content-addressed `outputs/grouping_cache/`. The first frames are encoded with the Wan2.2 VAE. The text prompts are encoded directly from the captions, as for the precomputed inputs. For both raw and precomputed inputs, output videos show only the generated player views.
 
-The reference previews below come from H200 runs with precomputed first-frame latents. Fresh VAE encoding on H20 can lead to visible differences in motion and viewpoint later in the clip, even with the same seed. This affects the 6-, 8-, and 10-player examples as well as the 4-player examples. The precomputed-input option below keeps the original first-frame latents for the 4-player set.
-
-In the current H20 checks, the two 10-player examples also retain visible differences from H200 when the original first-frame latents are reused. Their inference commands run successfully, but close cross-GPU reproduction remains unresolved.
+The reference previews below use precomputed first-frame latents. Fresh VAE encoding can lead to visible differences in motion and viewpoint later in the clip, even with the same seed. This affects the 6-, 8-, and 10-player examples as well as the 4-player examples. The precomputed-input option below keeps the original first-frame latents for the 4-player set.
 
 ## Precomputed inputs
 
-The 4-player set includes precomputed inputs. `4players/metadata.csv` points to the files the raw inputs produce, together with the latents of the full reference clips. Training and the training demo read it. To run inference from it and add the VAE reconstruction of each reference clip below the generated views, pass `--metadata_file_name metadata.csv`.
+The 4-player set includes precomputed inputs. `4players/metadata.csv` points to the files the raw inputs produce, together with full-clip latents for training. To run inference from these inputs, pass `--metadata_file_name metadata.csv`. Generation uses the first latent frame as its visual condition and saves only the generated views, with no reference-video row.
 
 The video path columns only identify the source of each stream; the source MP4 files are not needed.
 
@@ -98,7 +98,7 @@ See [dynamic grouping](../../docs/DYNAMIC_GROUPING.md) for the grouping state fo
 
 ### Four players
 
-Each preview shows frame 82, with generated player views above the VAE reconstruction of the inputs. They were produced from the precomputed inputs with the [example inference configuration](../../configs/inference_demo.yaml): 50 denoising steps, guidance scale 5, and attention window 21.
+Each preview shows the generated player views at frame 82. They were produced from the precomputed inputs with the [example inference configuration](../../configs/inference_demo.yaml): 50 denoising steps, guidance scale 5, and attention window 21.
 
 | Example | Preview |
 | --- | --- |
@@ -110,7 +110,7 @@ Each preview shows frame 82, with generated player views above the VAE reconstru
 
 ### Four-player model with six players
 
-These H200 reference previews show frame 82, with generated views above VAE reconstructions of the source clips. Raw-input inference produces only the generated row.
+These previews show generated views at frame 82. Raw-input inference produces only generated views.
 
 | Case | Preview |
 | --- | --- |
@@ -120,7 +120,7 @@ These H200 reference previews show frame 82, with generated views above VAE reco
 
 ### Four-player model with eight players
 
-These previews show generated H200 views at frame 82.
+These previews show generated views at frame 82.
 
 | Case | Preview |
 | --- | --- |
@@ -129,7 +129,7 @@ These previews show generated H200 views at frame 82.
 
 ### Four-player model with ten players
 
-These previews show generated H200 views at frame 82.
+These previews show generated views at frame 82.
 
 | Case | Preview |
 | --- | --- |

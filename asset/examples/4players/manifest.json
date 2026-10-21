@@ -156,8 +156,8 @@
         },
         {
           "path": "4_01/preview.jpg",
-          "sha256": "c9369710806f1d0e47a063d6b2ce3f0fc291a29e24c408b3b40f59d7cdb310ed",
-          "bytes": 54958
+          "sha256": "cc07efb20dd605fcd8549e924e38df50be459ebdbf02b99b6d8c4587865f655e",
+          "bytes": 26546
         }
       ],
       "reference_files": [
@@ -327,8 +327,8 @@
         },
         {
           "path": "4_02/preview.jpg",
-          "sha256": "65caa918852c7fb030e451bc3c2e3d6f39a52fa649033e02b9236bb70a5498ab",
-          "bytes": 48638
+          "sha256": "536dad9979784ad16048bb77e1e2115288e22d7e2a6568de2108929cbc76ce3f",
+          "bytes": 28107
         }
       ],
       "reference_files": [
@@ -498,8 +498,8 @@
         },
         {
           "path": "4_03/preview.jpg",
-          "sha256": "ab943ee3d84f56f4b3c8b437625885620dcd0b6d60ddc47e248c302e1058e158",
-          "bytes": 51330
+          "sha256": "9bd56a310140470fbb904c524fed1c04ef225a2b5018bf7ba28fd1db954542ad",
+          "bytes": 28260
         }
       ],
       "reference_files": [
@@ -669,8 +669,8 @@
         },
         {
           "path": "4_04/preview.jpg",
-          "sha256": "6923bf7ec33e246880c69a69b8dbd54c1d52862e62f62cdb8fa7efa5d0131801",
-          "bytes": 43612
+          "sha256": "5742ffef55fa6e7067a2ce2411b87f4c7012feb32beac6cfb67c8bd091c3248a",
+          "bytes": 25687
         }
       ],
       "reference_files": [
@@ -840,8 +840,8 @@
         },
         {
           "path": "4_05/preview.jpg",
-          "sha256": "16474a4112a354a0a94e4d9cd67aa7c16157e69cf5b47242a432cc05a8ba39b2",
-          "bytes": 65786
+          "sha256": "99593a41d813ad5568a80db3d53b1250a07b9501db30dfd759ae6aae29c092d5",
+          "bytes": 32205
         }
       ],
       "reference_files": [

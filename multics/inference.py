@@ -7,10 +7,9 @@ import time
 import numpy as np
 import pandas as pd
 import torch
-from PIL import Image
 from .utils import ModelConfig
 from .pipelines.wan_video_Nplayers import WanVideoNPlayersPipeline
-from .data.video import save_video
+from .data.video import generated_player_grid, save_video
 from multics.models.wan_video_dit import prepare_hier_local_hub_state_dict_for_load
 from multics.data.dataset import (
     PrecomputedLatentDataset,
@@ -21,7 +20,6 @@ from multics.data.raw_inputs import (
     is_raw_metadata,
     prepare_raw_inputs,
 )
-from multics.data.utils import tensor_bchw_to_pil_list, pad_pil_list_to_length
 from multics.visualization import overview_path, save_action_camera
 
 
@@ -272,26 +270,6 @@ def _precomputed_video_latents(batch) -> torch.Tensor:
     return torch.cat([batch["latents1"], batch["latents2"]], dim=0)
 
 
-def _decode_latents_to_video(
-    pipe, latents_b1: torch.Tensor, tiler_kwargs: dict
-) -> torch.Tensor:
-    """[1, 48, T_lat, h, w] -> [1, 3, T_rgb, H, W] for GT grid / parity."""
-    pipe.load_models_to_device(["vae"])
-    return pipe.decode_video(
-        latents_b1.to(dtype=pipe.torch_dtype, device=pipe.device), **tiler_kwargs
-    )
-
-
-def _decode_latents_to_videos(
-    pipe, latents_p: torch.Tensor, tiler_kwargs: dict
-) -> torch.Tensor:
-    """[P,48,T_lat,h,w] -> [P,3,T_rgb,H,W] for GT grids."""
-    pipe.load_models_to_device(["vae"])
-    return pipe.decode_video(
-        latents_p.to(dtype=pipe.torch_dtype, device=pipe.device), **tiler_kwargs
-    )
-
-
 def _as_player_videos(outputs):
     """Normalize pipeline return to list length P; P=2 may be returned as a tuple for compatibility."""
     if isinstance(outputs, tuple):
@@ -475,44 +453,6 @@ def _player_file_tag(player_idx: int, num_players: int) -> str:
     if num_players == 2:
         return "playerA" if player_idx == 0 else "playerB"
     return f"player{player_idx + 1:02d}"
-
-
-def _build_player_rows_grid_video(rows, t_grid: int, border: int = 1):
-    """Build a generic rows x P grid.
-
-    Tensor/PIL convention at caller:
-      rows: List[R][P][T] of PIL frames.
-      Current N-player inference uses R=2:
-        row 0 = generated players [P,T]
-        row 1 = GT players        [P,T]
-    """
-    if not rows or not rows[0]:
-        raise ValueError("_build_player_rows_grid_video: empty rows")
-    num_rows = len(rows)
-    num_players = len(rows[0])
-    for ridx, row in enumerate(rows):
-        if len(row) != num_players:
-            raise ValueError(
-                f"_build_player_rows_grid_video: row {ridx} has {len(row)} players, expected {num_players}"
-            )
-        for pidx, frames in enumerate(row):
-            if len(frames) < t_grid:
-                raise ValueError(
-                    f"_build_player_rows_grid_video: row={ridx} player={pidx} has {len(frames)} frames, expected >= {t_grid}"
-                )
-    w0, h0 = rows[0][0][0].size
-    total_w = num_players * w0 + (num_players - 1) * border
-    total_h = num_rows * h0 + (num_rows - 1) * border
-    grid_frames = []
-    for tidx in range(t_grid):
-        canvas = Image.new("RGB", (total_w, total_h), color=(0, 0, 0))
-        for ridx, row in enumerate(rows):
-            for pidx, frames in enumerate(row):
-                x = pidx * (w0 + border)
-                y = ridx * (h0 + border)
-                canvas.paste(frames[tidx], (x, y))
-        grid_frames.append(canvas)
-    return grid_frames
 
 
 def main():
@@ -767,7 +707,6 @@ def main():
         batch_size=1,
         num_workers=args.dataloader_num_workers,
     )
-    tiler_kwargs = {"tiled": True, "tile_size": TILE_SIZE, "tile_stride": TILE_STRIDE}
     target_text = ""
     _t_first_batch = time.perf_counter()
     for local_i, batch in enumerate(loader):
@@ -778,8 +717,6 @@ def main():
                 f"[timing] first dataloader batch {time.perf_counter() - _t_first_batch:.2f}s ({src})",
                 flush=True,
             )
-        video_latents = None
-        gt_all = None
         keyboard = batch["keyboard"].squeeze(0)[:, :-1, :]
         mouse = batch["mouse"].squeeze(0)[:, :-1, :]
         video_latents = _precomputed_video_latents(batch).to(
@@ -789,13 +726,6 @@ def main():
             raise ValueError(
                 f"batch video_latents P={video_latents.shape[0]} does not match --num_players={args.num_players}"
             )
-        # First-frame-only latents (raw inputs) have no ground-truth clip.
-        if video_latents.shape[2] > 1:
-            gt_all = _decode_latents_to_videos(pipe, video_latents, tiler_kwargs)
-            video1 = gt_all[0:1]
-            video2 = gt_all[1:2]
-        else:
-            video1 = video2 = None
         camera_pose = None
         if args.use_camera_pose:
             if "camera_pose" not in batch:
@@ -852,8 +782,6 @@ def main():
                 pipe.causal_inference(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
-                    video1=video1,
-                    video2=video2,
                     mouse=mouse,
                     keyboard=keyboard,
                     num_frames=args.causal_num_frames,
@@ -894,28 +822,7 @@ def main():
                     quality=5,
                 )
         if not args.no_save_grid:
-            T_gen = len(gen_players[0])
-            for pidx, gen_p in enumerate(gen_players):
-                if len(gen_p) != T_gen:
-                    raise RuntimeError(
-                        f"Player outputs length mismatch: player0={T_gen} vs player{pidx}={len(gen_p)}"
-                    )
-            grid_rows = [gen_players]
-            if gt_all is not None:
-                grid_rows.append(
-                    [
-                        tensor_bchw_to_pil_list(gt_all[pidx])
-                        for pidx in range(args.num_players)
-                    ]
-                )
-            T_grid = max(len(frames) for row in grid_rows for frames in row)
-            grid_frames = _build_player_rows_grid_video(
-                [
-                    [pad_pil_list_to_length(frames, T_grid) for frames in row]
-                    for row in grid_rows
-                ],
-                T_grid,
-            )
+            grid_frames = generated_player_grid(gen_players)
             save_video(
                 grid_frames,
                 os.path.join(args.output_dir, f"video{batch_idx}_grid.mp4"),

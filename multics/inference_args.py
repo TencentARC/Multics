@@ -177,7 +177,7 @@ def parse_args():
     p.add_argument(
         "--no_save_grid",
         action="store_true",
-        help="Do not write grid MP4. N-player precomputed inference writes 2xP grid (gen / GT).",
+        help="Do not write the grid MP4 of generated player views.",
     )
     p.add_argument(
         "--no_save_separate_players",

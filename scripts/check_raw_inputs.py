@@ -9,7 +9,8 @@ which were cut from whole rounds.
 With ``--vae``, the first-frame latents are also encoded on the
 GPU and compared with the first frame of the precomputed latents. The latent
 difference is reported but not required to be zero: the bundled latents were
-encoded on an H200, and other GPUs can round some bf16 values differently.
+encoded in a reference environment, and other GPUs can round some bf16 values
+differently.
 """
 
 import argparse
